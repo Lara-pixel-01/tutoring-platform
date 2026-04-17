@@ -1,0 +1,10 @@
+{% from "_helpers.html" import render_field %}
+
+<form method="post">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.name, placeholder="Your username") }}
+    {{ render_field(form.password1, placeholder="Your password") }}
+    {{ render_field(form.password2, placeholder="Your password again") }}
+    {{ render_field(form.email, placeholder="Your email") }}
+    {{ form.submit }}
+</form>
