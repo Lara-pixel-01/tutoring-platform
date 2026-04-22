@@ -365,15 +365,52 @@ class MakeSessView(MethodView):
         if not user_id:
             return redirect(url_for('signup'))
         
-        user = db.session.execute(select(User).where(User.id== user_id))
-
-        skill_choises = [(skill.id, skill.name) for skill in user.skills]
+        user = db.session.execute(select(User).where(User.id== user_id)).scalar_one_or_none()
 
 
+        form = MakeSessForm()
+        form.skill_id.choices = [(skill.id, skill.name) for skill in user.skills]
 
+        return render_template('create_session.html', form=form)
+    
+    def post(self):
+        user_id = session.get('user_id')
+        if not user_id:
+            return redirect(url_for('signup'))
+        
+        user = db.session.execute(select(User).where(User.id== user_id)).scalar_one_or_none()
+        
+        form = MakeSessForm()
+        form.skill_id.choices = [(skill.id, skill.name) for skill in user.skills]
+
+        if form.validate_on_submit():
+
+            start_time = datetime.fromisoformat(form.start_time.data)
+            end_time = datetime.fromisoformat(form.end_time.data)
+
+            sess = Sess(
+                teacher_id= user_id,
+                skill_id = form.skill_id.data,
+                start_time=start_time,
+                end_time=end_time,
+                hourly_rate = form.hourly_rate.data
+            )
+
+            if user.is_teacher != True:
+                user.is_teacher = True
+
+
+            db.session.add(sess)
+            db.session.commit()
+
+            return redirect(url_for('dashboard'))
+        
+        return render_template('create_session.html', form=form)
 
             #Im tired :)...
             
+
+        
 
 
 app.add_url_rule('/', view_func=MainPageView.as_view('ind'))
