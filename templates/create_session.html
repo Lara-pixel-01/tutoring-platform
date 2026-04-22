@@ -1,0 +1,10 @@
+{% from "_helpers.html" import render_field %}
+
+<form method="post">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.skill_id) }}
+    {{ render_field(form.start_time, type="datetime-local") }}
+    {{ render_field(form.end_time, type="datetime-local") }}
+    {{ render_field(form.hourly_rate, type="number", step ="0.01") }}
+    {{ form.submit }}
+</form>
