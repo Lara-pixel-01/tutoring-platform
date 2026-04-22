@@ -408,9 +408,10 @@ class MakeSessView(MethodView):
         return render_template('create_session.html', form=form)
 
             #Im tired :)...
-            
 
-        
+
+#test changes.
+            
 
 
 app.add_url_rule('/', view_func=MainPageView.as_view('ind'))

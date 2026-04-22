@@ -1,8 +1,0 @@
-{% from "_helpers.html" import render_field %}
-
-<form method="post">
-    {{ form.hidden_tag() }}
-    {{ render_field(form.comment, placeholder="Write Comment") }}
-    {{ render_field(form.rating) }}
-    {{ form.submit }}
-</form>

@@ -1,8 +1,0 @@
-{% from "_helpers.html" import render_field %}
-
-<form method="post">
-    {{ form.hidden_tag() }}
-    {{ render_field(form.email, placeholder="Your email") }}
-    {{ render_field(form.password, placeholder="Your password") }}
-    {{ form.submit }}
-</form>
