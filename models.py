@@ -2,15 +2,17 @@ import random
 from typing import List, Optional as OptionalTip
 from faker import Faker
 from datetime import datetime
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, url_for, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey, select, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func 
 
+from extenstions import db
 
-db = SQLAlchemy()
-
+fake = Faker()
 
 #to add:
 
@@ -27,7 +29,7 @@ user_skills = db.Table('user_skills',
 
 
 
-class User(db.Model):
+class User(UserMixin , db.Model):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     email: Mapped[str] = mapped_column(db.String(100), unique=True)
@@ -37,6 +39,7 @@ class User(db.Model):
     profile_pic: Mapped[OptionalTip[str]] = mapped_column(db.String(999))
     is_teacher: Mapped[bool] = mapped_column(db.Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    timezone: Mapped[OptionalTip[str]] = mapped_column(db.String(50), default='UTC')  #note to self!!!!!: this will probably will come in handy when I will deal timezone convertions 
 
     #seperation purposes, below are the relationships:
 
@@ -51,6 +54,12 @@ class User(db.Model):
     received_messages: Mapped[List["Message"]] = relationship(foreign_keys="Message.receiver_id", back_populates="receiver")
 
     notifications: Mapped[List["Notification"]] = relationship(back_populates="user")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
 
 
@@ -158,3 +167,80 @@ class Notification(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="notifications")
+
+
+def create_db(app:Flask):
+    with app.app_context(): 
+        db.create_all()
+
+
+def fill_db(app: Flask):  
+    from flask_bcrypt import Bcrypt
+
+    bcrypt = Bcrypt()
+
+    with app.app_context():   
+        db.drop_all()
+        db.create_all()
+
+
+        skill_cat = {
+            "Programming": ['Python', 'Java', "SQL"],
+            "Language": ['English', 'Japanese', 'Chinese'],
+            "Maths": ['Algebra', 'Calculus', 'Statistics','Probability']
+        }
+        
+        for category, skill in skill_cat.items():
+            for name in skill:
+                user_skill = Skill(
+                    name=name,
+                    category=category
+                )
+                db.session.add(user_skill)
+        db.session.commit()
+
+
+            
+        for i in range(20):
+            user = User(email= fake.email(),
+                password = bcrypt.generate_password_hash(fake.password()).decode('utf-8'),
+                name = fake.name(),
+                bio = fake.paragraph(nb_sentences=random.randint(3, 7)),
+                is_teacher = fake.boolean()
+            )
+
+            db.session.add(user)
+        db.session.commit()
+
+        teachers = db.session.execute(select(User).where(User.is_teacher==True)).scalars().all()
+
+        skills = db.session.execute(select(Skill)).scalars().all()
+
+        for teacher in teachers:
+            skill_count =  random.randint(1,3)
+            teacher_skill = random.sample(skills, skill_count)
+            teacher.skills.extend(teacher_skill)
+        
+        db.session.commit()
+
+
+
+        for teacher in teachers:
+            users  =  db.session.execute(select(User).where(User.id != teacher.id)).scalars().all()
+            review_count = random.randint(3,10)
+
+            reviewers = random.sample(users, min(review_count, len(users)))
+
+            for reviewer in reviewers:
+                review = Review(
+                    comment = fake.paragraph(nb_sentences=random.randint(1,3)),
+                    reviewer_id = reviewer.id,
+                    teacher_id = teacher.id,
+                    rating = random.choice([3.5, 3, 4, 5, 4.5])
+                )
+                db.session.add(review)
+
+
+        
+        
+        db.session.commit()
