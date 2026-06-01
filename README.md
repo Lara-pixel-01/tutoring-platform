@@ -2,12 +2,9 @@
 
 **A web platform connecting tutors and students for booking 1-on-1 sessions.**
 
-🔗 **Live Demo:** *Coming soon*  
-📅 **Status:** Active development
-
 ---
 
-## ✨ Features
+## Features
 
 - **Authentication** — Email/password + OAuth (Google, GitHub)
 - **Real-time Chat** — WebSocket messaging (Socket.IO)
@@ -20,7 +17,7 @@
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Category | Technologies |
 |----------|--------------|
@@ -33,7 +30,7 @@
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose
