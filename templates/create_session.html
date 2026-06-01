@@ -1,10 +1,149 @@
+{% extends "base.html" %}
 {% from "_helpers.html" import render_field %}
 
-<form method="post">
-    {{ form.hidden_tag() }}
-    {{ render_field(form.skill_id) }}
-    {{ render_field(form.start_time, type="datetime-local") }}
-    {{ render_field(form.end_time, type="datetime-local") }}
-    {{ render_field(form.hourly_rate, type="number", step ="0.01") }}
-    {{ form.submit }}
-</form>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='create_session.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="create-session-page">
+    <a href="{{ url_for('dashboard') }}" class="back-link">
+        ← Back to Dashboard
+    </a>
+
+    <div class="schedule-card">
+        <div class="schedule-header">
+            <h3>📅 Your Weekly Schedule</h3>
+            <p>Upcoming sessions for the next 7 days</p>
+        </div>
+        <div class="schedule-grid">
+            {% if weekly_sessions %}
+                {% for day_data in weekly_sessions %}
+                <div class="day-row">
+                    <div class="day-title">
+                        {{ day_data.day_name }}, {{ day_data.date }}
+                    </div>
+                    <div class="session-list">
+                        {% if day_data.sessions %}
+                            {% for session in day_data.sessions %}
+                            <div class="session-item-schedule">
+                                <span class="session-skill">{{ session.skill_name }}</span>
+                                <span class="session-time">{{ session.start_time }}   {{ session.end_time }}</span>
+                                <span class="session-rate">${{ "%.2f"|format(session.hourly_rate) }}/hr</span>
+                                <span class="{% if session.status == 'free' %}status-free{% else %}status-booked{% endif %}">
+                                    {{ session.status|capitalize }}
+                                </span>
+                                {% if session.status =='free'%}
+                                    <button onclick="deleteSession({{session.id}})">✗</button>
+                                {%endif%}
+                            </div> 
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-day">No sessions scheduled</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-day" style="text-align: center; padding: 32px;">
+                    📭 No upcoming sessions in the next 7 days.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-header">
+            <h3>✏️ Create New Session</h3>
+        </div>
+        <div class="session-form">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="error-message">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('make_session') }}">
+                {{ form.hidden_tag() }}
+
+                {{ render_field(form.skill_id) }}
+
+                <div class="row-grid">
+                    <div class="form-group">
+                        {{ form.start_date.label() }}
+                        {{ form.start_date(class="form-control", type="date", min=today_date) }}
+                        {% if form.start_date.errors %}
+                            <div class="field-error">{{ form.start_date.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.start_time.label() }}
+                        {{ form.start_time(class="form-control", type="time") }}
+                        {% if form.start_time.errors %}
+                            <div class="field-error">{{ form.start_time.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.end_time.label() }}
+                        {{ form.end_time(class="form-control", type="time") }}
+                        {% if form.end_time.errors %}
+                            <div class="field-error">{{ form.end_time.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.hourly_rate.label() }}
+                        <div class="rate-wrapper">
+                            {{ form.hourly_rate(class="form-control", type="number", min="5", max="500", step="0.5", placeholder="25") }}
+                        </div>
+                        {% if form.hourly_rate.errors %}
+                            <div class="field-error">{{ form.hourly_rate.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    {{ form.recurring() }}
+                    {{ form.recurring.label() }}
+                </div>
+
+                <div class="recurring-options">
+                    <div class="form-group weeks-input">
+                        {{ form.weeks_count.label() }}
+                        {{ form.weeks_count(class="form-control", type="number", min="1", max="12") }}
+                    </div>
+                    <div class="helper-text">
+                        📌 Sessions will be created for the same day and time each week.<br>
+                        Maximum 12 weeks.
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="form-actions">
+                    {{ form.submit(class="btn-submit") }}
+                    <a href="{{ url_for('dashboard') }}" class="btn-cancel">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function deleteSession(sessionId){
+    if (confirm('Delete this lesson?')){
+        fetch(`/delete-session/${sessionId}`, {
+            method: 'DELETE',
+        }).then(response => {
+            if (response.ok){
+                window.location.reload();
+            } else{
+                alert('Failed to delete the lesson')
+            }
+        });
+    }
+}
+
+</script>
+
+{% endblock %}

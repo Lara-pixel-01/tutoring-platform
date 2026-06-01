@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<style>
+    .session-date {
+        font-size: 10px;
+        color: #6b6f8a;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <div class="greeting">
+        <h1>Welcome, {{ user.name }}</h1>
+        <p>Student Dashboard</p>
+    </div>
+</div>
+
+<div class="two-columns">
+    <div class="card">
+        <div class="card-header">
+            <h2>📅 Upcoming Sessions</h2>
+        </div>
+        <div class="card-body">
+            {% for session in upcoming %}
+            <div class="session-item">
+                <div class="session-time-badge">
+                    <div class="session-time">{{ session.local_start_time.strftime('%I:%M %p') }}</div>
+                    <div class="session-date">{{ session.local_start_time.strftime('%b %d') }}</div>
+                </div>
+                <div class="session-info">
+                    <div class="session-skill">{{ session.skill.name if session.skill else 'General' }}</div>
+                    <div class="session-partner">with {{ session.teacher.name if session.teacher else 'Teacher' }}</div>
+                </div>
+                <div class="session-type type-teaching">{{ session.status }}</div>
+            </div>
+            {% else %}
+            <div class="empty-state">No upcoming sessions</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Pending Requests</h2>
+        </div>
+        <div class="card-body">
+            {% for req in pending %}
+            <div class="request-item">
+                <div class="request-header">
+                    <span class="request-skill">{{ req.session.skill.name if req.session.skill else 'General' }}</span>
+                    <span class="request-time">{{ req.status }}</span>
+                </div>
+                <div class="request-student">Waiting for teacher to respond</div>
+            </div>
+            {% else %}
+            <div class="empty-state">No pending requests</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

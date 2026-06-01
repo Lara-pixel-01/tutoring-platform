@@ -1,11 +1,10 @@
 import random
 from typing import List, Optional as OptionalTip
 from faker import Faker
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, url_for, redirect, session
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
 from sqlalchemy import ForeignKey, select, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func 
@@ -29,7 +28,7 @@ user_skills = db.Table('user_skills',
 
 
 
-class User(UserMixin , db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     email: Mapped[str] = mapped_column(db.String(100), unique=True)
@@ -39,24 +38,25 @@ class User(UserMixin , db.Model):
     profile_pic: Mapped[OptionalTip[str]] = mapped_column(db.String(999))
     is_teacher: Mapped[bool] = mapped_column(db.Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    timezone: Mapped[OptionalTip[str]] = mapped_column(db.String(50), default='UTC')  #note to self!!!!!: this will probably will come in handy when I will deal timezone convertions 
 
     #seperation purposes, below are the relationships:
 
     skills: Mapped[List["Skill"]] = relationship(secondary=user_skills, back_populates='users')
 
-    reviews_written: Mapped[List["Review"]] = relationship(foreign_keys="Review.reviewer_id", back_populates="reviewer")
-    reviews_received: Mapped[List["Review"]] = relationship(foreign_keys="Review.teacher_id", back_populates="teacher")
+    reviews_written: Mapped[List["Review"]] = relationship(foreign_keys="Review.reviewer_id", back_populates="reviewer",  cascade="all, delete-orphan")
+    reviews_received: Mapped[List["Review"]] = relationship(foreign_keys="Review.teacher_id", back_populates="teacher", cascade="all, delete-orphan")
 
-    portfolio: Mapped[List["PortfolioPosts"]] = relationship(back_populates='user')
+    portfolio: Mapped[List["PortfolioPosts"]] = relationship(back_populates='user', cascade="all, delete-orphan")
 
-    sent_messages: Mapped[List["Message"]] = relationship(foreign_keys="Message.sender_id", back_populates="sender")
-    received_messages: Mapped[List["Message"]] = relationship(foreign_keys="Message.receiver_id", back_populates="receiver")
+    sent_messages: Mapped[List["Message"]] = relationship(foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    received_messages: Mapped[List["Message"]] = relationship(foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
 
-    notifications: Mapped[List["Notification"]] = relationship(back_populates="user")
+    notifications: Mapped[List["Notification"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+    settings: Mapped['UserSettings'] = relationship(back_populates='user', cascade="all, delete-orphan")
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
@@ -64,7 +64,7 @@ class User(UserMixin , db.Model):
 
 
 
-class Skill(db.Model):
+class Skill(db.Model, UserMixin):
     __tablename__ = 'skills'
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(100))
@@ -76,7 +76,7 @@ class Skill(db.Model):
 
 
 
-class SessionRequest(db.Model):
+class SessionRequest(UserMixin, db.Model):
     __tablename__ = 'session_requests'
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey('sessions.id'))
@@ -91,7 +91,7 @@ class SessionRequest(db.Model):
 
 
 
-class Sess(db.Model):
+class Sess(db.Model, UserMixin):
     __tablename__ = 'sessions'
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     teacher_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
@@ -107,11 +107,22 @@ class Sess(db.Model):
     #seperation purposes, below are the relationships:
     session_requests: Mapped[List["SessionRequest"]] = relationship(back_populates='session')
 
+    def update_status(self):
+        now = datetime.now()
+
+        if self.status == 'free' and self.start_time < now:
+            self.status = 'expired'
+            return True
+        elif self.status == 'booked' and self.end_time < now:
+            self.status = 'finished'
+            return True
+        return False
 
 
 
 
-class Review(db.Model):
+
+class Review(db.Model, UserMixin):
     __tablename__ = 'reviews'
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     comment: Mapped[str] = mapped_column(db.String(9999))
@@ -127,7 +138,7 @@ class Review(db.Model):
 
 
 
-class PortfolioPosts(db.Model):
+class PortfolioPosts(db.Model, UserMixin):
     __tablename__ = "portfolio_posts"
 
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
@@ -142,7 +153,7 @@ class PortfolioPosts(db.Model):
 
 
 
-class Message(db.Model):
+class Message(db.Model, UserMixin):
     __tablename__ = "messages"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     sender_id: Mapped[int] = mapped_column(ForeignKey('users.id')) #whos the user taht is making the comment
@@ -158,7 +169,7 @@ class Message(db.Model):
 
 
 
-class Notification(db.Model):
+class Notification(db.Model, UserMixin):
     __tablename__ = "notifications"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
@@ -167,6 +178,16 @@ class Notification(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="notifications")
+
+#I just realised I dont have one to one relationshio so added ths
+
+class UserSettings(db.Model, UserMixin):
+    __tablename__ = "user_settings"
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    timezone: Mapped[OptionalTip[str]] = mapped_column(db.String(50), default='UTC')
+
+    user: Mapped['User'] = relationship(back_populates='settings')
+
 
 
 def create_db(app:Flask):
@@ -240,7 +261,108 @@ def fill_db(app: Flask):
                 )
                 db.session.add(review)
 
+        for teacher in teachers:
 
+            for x in range(random.randint(3,6)):
+                start = fake.date_time_between(start_date='-30d', end_date='+30d')
+                end = start + timedelta(hours=1)
+
+                sess = Sess(
+                    teacher_id = teacher.id,
+                    skill_id = random.choice(skills).id,
+                    start_time= start,
+                    end_time = end,
+                    hourly_rate = round(random.uniform(20,100),2),
+                )
+
+                db.session.add(sess)
+
+
+        test_user = User(
+            email='some@gmail.com',
+            password=bcrypt.generate_password_hash('123').decode('utf-8'),
+            name=fake.name(),
+            bio='test acc',
+            is_teacher=True
+        )
+        db.session.add(test_user)
+        db.session.commit()
+
+        python_skill = db.session.execute(select(Skill).where(Skill.name == 'Python')).scalar()
+        english_skill = db.session.execute(select(Skill).where(Skill.name == 'English')).scalar()
+        if python_skill:
+            test_user.skills.append(python_skill)
+        if english_skill:
+            test_user.skills.append(english_skill)
+        db.session.commit()
+
+        other_users = db.session.execute(select(User).where(User.id != test_user.id)).scalars().all()
+
+        for reviewer in other_users[:5]:
+            review = Review(
+                comment=fake.paragraph(),
+                reviewer_id=reviewer.id,
+                teacher_id=test_user.id,
+                rating=random.choice([4, 5])
+            )
+            db.session.add(review)
+        db.session.commit()
+
+        students = [u for u in other_users if not u.is_teacher]
         
-        
+
+        test_skills = [s for s in [python_skill, english_skill] if s is not None]
+        test_sessions = []
+
+        for i in range(5):
+            start = fake.date_time_between(start_date='now', end_date='+6d')
+            end = start + timedelta(hours=1)
+            random_skill = random.choice(test_skills)
+            
+            sess = Sess(
+                teacher_id=test_user.id,
+                skill_id=random_skill.id,
+                start_time=start,
+                end_time=end,
+                hourly_rate=random.uniform(30, 80),
+                status='free'  
+            )
+            db.session.add(sess)
+            test_sessions.append(sess)
+        db.session.commit()
+
+        for session in test_sessions:
+            db.session.refresh(session)
+            
+
+        for i, session in enumerate(test_sessions[:3]):  
+            if i < len(students) and session.start_time > datetime.now():
+                student = students[i]
+                skill = db.session.execute(select(Skill).where(Skill.id == session.skill_id)).scalar()
+                skill_name = skill.name if skill else 'this skill'
+                
+                request = SessionRequest(
+                    session_id=session.id,
+                    student_id=student.id,
+                    student_level=random.choice(['Beginner', 'Intermediate', 'Advanced']),
+                    student_goals=f"I want to learn {skill_name}!",
+                    status='pending'
+                )
+                db.session.add(request)
+
+        for i, session in enumerate(test_sessions[3:4]):  
+            if i < len(students):
+                session.student_id = students[i].id
+                session.status = 'booked'
+                db.session.add(session)
+
+        for i, session in enumerate(test_sessions[4:5]):  
+            if i < len(students) and session.start_time > datetime.now():
+                session.student_id = students[i].id
+                session.status = 'finished'
+                session.start_time = datetime.now() - timedelta(days=5)
+                session.end_time = session.start_time + timedelta(hours=1)
+                db.session.add(session)
+
+
         db.session.commit()

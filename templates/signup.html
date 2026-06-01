@@ -1,10 +1,104 @@
-{% from "_helpers.html" import render_field %}
-
-<form method="post">
-    {{ form.hidden_tag() }}
-    {{ render_field(form.name, placeholder="Your username") }}
-    {{ render_field(form.password1, placeholder="Your password") }}
-    {{ render_field(form.password2, placeholder="Your password again") }}
-    {{ render_field(form.email, placeholder="Your email") }}
-    {{ form.submit }}
-</form>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #eef0f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #eef2f6;
+            padding: 40px;
+            width: 400px;
+        }
+        h2 {
+            margin: 0 0 24px 0;
+            color: #1a1c2b;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #eef2f6;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            background: #c7e86a;
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #999;
+        }
+        .oauth {
+            display: flex;
+            gap: 12px;
+        }
+        .btn-google {
+            flex: 1;
+            background: #4285f4;
+            color: white;
+            padding: 10px;
+            border-radius: 40px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+        .btn-github {
+            flex: 1;
+            background: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 40px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        a {
+            color: #c7e86a;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Sign Up</h2>
+        <form method="post">
+            {{ form.hidden_tag() }}
+            {{ form.name(placeholder="Name") }}
+            {{ form.password1(placeholder="Password") }}
+            {{ form.password2(placeholder="Confirm Password") }}
+            {{ form.email(placeholder="Email") }}
+            <button type="submit">Sign Up</button>
+        </form>
+        <div class="divider">or</div>
+        <div class="oauth">
+            <a href="{{ url_for('google_login') }}" class="btn-google">Google</a>
+            <a href="{{ url_for('github_login') }}" class="btn-github">GitHub</a>
+        </div>
+        <div class="footer">
+            Already have an account? <a href="{{ url_for('signin') }}">Sign In</a>
+        </div>
+    </div>
+</body>
+</html>

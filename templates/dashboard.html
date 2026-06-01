@@ -1,7 +1,117 @@
-<!DOCTYPE html>
-<html>
-    <body>
-        <p> This is your dashboard :D {{user.name}}</p>
-        <a href="{{url_for('logout')}}">Log out?</a>
-    </body>
-</html>
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <div class="greeting">
+        <h1>Welcome back, {{ user.name }} </h1>
+        <p>You have {{ pending_requests|length }} pending requests and {{ upcoming_sessions|length }} avaliable sessions</p>
+    </div>
+    <div class="user-actions">
+        <div class="avatar"></div>
+    </div>
+</div>
+
+<div class="two-columns">
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <h2>New Requests</h2>
+                <a href="{{ url_for('dashboard')}}">View all</a> <!-- do not forget to change this redirection later-->
+            </div>
+            <div class="card-body">
+                {% for request in pending_requests %}
+                <div class="request-item">
+                    <div class="request-header">
+                        <span class="request-skill">{{request.session.skill.name}}</span>
+                        <span class="request-time">{{request.status}}</span>
+                    </div>
+                    <div class="request-student">
+                        from {{request.student.name}}
+                        {{request.student_level}} level
+                    </div>
+                    {% if request.student_goals%}
+                    <div class="request-message">
+                        "{{ request.student_goals[:100]}}{% if request.student_goals| length > 100%}...{%endif%}"
+                    </div>
+                    {% endif%}
+                    <div class="request-actions">
+                        <form method="post" action="{{ url_for('dashboard')}}">
+                            <input type="hidden" name="action" value="accept">
+                            <input type="hidden" name="request_id" value="{{request.id}}">
+                            <button class="btn-accept">✓ Accept</button>
+                        </form>
+
+                            <button class="btn-message">💬 Message</button>
+
+                        <form method="post" action="{{ url_for('dashboard')}}">
+                            <input type="hidden" name="action" value="decline">
+                            <input type="hidden" name="request_id" value="{{request.id}}">
+                            <button class="btn-decline">✗ Decline</button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">No pending requests</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Upcoming sessions</h2>
+                <a href="{{ url_for('make_session')}}">Create New</a>
+            </div>
+
+            <div class="card-body">
+                {% for session in upcoming_sessions %}
+                <div class="session-item">
+                    <div class="session-time-badge">
+                        <div class="session-time">
+                            {{ session.local_start_time.strftime('%I:%M %p') }}
+                        </div>
+                    </div>
+                    <div class="session-info">
+                        <div class="session-skill">
+                            {{session.skill.name}}
+                        </div>
+
+                        <div class="session-partner">
+                            with {{session.student.name}}
+                        </div>
+                    </div>
+                    <div class="session-type type-teaching">{{session.status}}</div>
+                </div>
+                {% else %}
+                <div class="empty-state">No upcoming sessions <a href="{{ url_for('make_session')}}"> Create one</a></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <h2>⭐ Recent reviews</h2>
+                <a href="{{ url_for('review', teacher_id=user.id)}}">View all</a> 
+            </div>
+            <div class="card-body">
+                {% for review in recent_reviews %}
+                <div class="request-item">
+                    <div style="color: #f5b042; margin-bottom: 6px;">
+                        {{ '★' * review.rating }}{{ '☆' * (5 - review.rating) }}
+                    </div>
+                    <div class="request-message">"{{ review.comment or 'No comment' }}"</div>
+                    <div class="request-student">- {{review.reviewer.name}}</div>
+                </div>
+                {% else %}
+                <div class="empty-state">No reviews yet</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

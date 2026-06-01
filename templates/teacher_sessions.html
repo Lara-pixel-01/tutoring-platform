@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "_helpers.html" import render_field %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='create_session.css') }}">
+<style>
+    .session-card {
+        background: #f8f9ff;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 16px;
+        border: 1px solid #eef2f6;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .session-card:hover {
+        border-color: #c7e86a;
+    }
+    .session-card.selected {
+        border-color: #c7e86a;
+        background: #fff8e7;
+    }
+    .request-form-container {
+        margin-top: 24px;
+        padding: 20px;
+        background: #fafbfe;
+        border-radius: 20px;
+        border: 1px solid #eef2f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="schedule-card">
+    <div class="schedule-header">
+        <h3>📅 Available Sessions with {{ teacher.name }}</h3>
+        {% if selected_skill %}
+            <p>Showing sessions for: <strong>{{ selected_skill.name }}</strong></p>
+            <a href="{{ url_for('teacher_sessions', user_id=teacher.id) }}">← View all sessions</a>
+        {% endif %}
+    </div>
+    <div class="schedule-grid">
+        {% if sessions %}
+            {% for session in sessions %}
+            <div class="session-card" onclick="selectSession({{ session.id }}, '{{ session.skill.name if session.skill else 'General' }}', '{{ session.start_time.strftime('%Y-%m-%d %H:%M') }}', {{ session.hourly_rate }})">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div class="session-skill">{{ session.skill.name if session.skill else 'General' }}</div>
+                        <div class="session-time">{{ session.local_start_time.strftime('%A, %b %d at %I:%M %p') }}</div>
+                    </div>
+                    <div class="session-rate">${{ "%.0f"|format(session.hourly_rate) }}/hr</div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-day" style="text-align: center; padding: 32px;">
+                📭 No available sessions at the moment.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="requestFormContainer" class="request-form-container" style="display: none;">
+    <h3>📖 Request This Session</h3>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <input type="hidden" name="session_id" id="selected_session_id">
+        
+        <div id="sessionInfo" style="background: white; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+            <p><strong>Skill:</strong> <span id="selected_skill"></span></p>
+            <p><strong>Date:</strong> <span id="selected_time"></span></p>
+            <p><strong>Price:</strong> $<span id="selected_price"></span>/hr</p>
+        </div>
+        
+        {{ render_field(form.student_level) }}
+        {{ render_field(form.student_goals, placeholder="What do you want to learn in this session?") }}
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Send Request</button>
+            <button type="button" class="btn-cancel" onclick="cancelSelection()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function selectSession(id, skill, time, price) {
+        document.querySelectorAll('.session-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+        document.getElementById('selected_session_id').value = id;
+
+        document.getElementById('selected_skill').textContent = skill;
+        document.getElementById('selected_time').textContent = time;
+        document.getElementById('selected_price').textContent = price;
+        document.getElementById('requestFormContainer').style.display = 'block';
+    
+        document.getElementById('requestFormContainer').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function cancelSelection() {
+        document.getElementById('selected_session_id').value = '';
+        document.querySelectorAll('.session-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        document.getElementById('requestFormContainer').style.display = 'none';
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% from "_helpers.html" import render_field %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
+<style>
+    .profile-header {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid #eef2f6;
+    }
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #c7e86a, #9bc440);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        color: #1a1c2b;
+        flex-shrink: 0;
+    }
+    .profile-name {
+        font-size: 32px;
+        font-weight: 800;
+        color: #1a1c2b;
+        margin-bottom: 8px;
+    }
+    .profile-bio {
+        color: #4a4e6a;
+        margin-bottom: 16px;
+    }
+    .skill-card {
+        background: #f8f9ff;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #eef2f6;
+    }
+    .portfolio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .portfolio-item {
+        background: #f8f9ff;
+        border-radius: 16px;
+        border: 1px solid #eef2f6;
+        overflow: hidden;
+    }
+    .portfolio-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="profile-avatar"></div>
+    <div>
+        <div class="profile-name">{{ user_profile.name }}</div>
+        <div class="profile-bio">{{ user_profile.bio or 'No bio yet.' }}</div>
+        <div style="display: flex; gap: 12px;">
+            <a href="{{ url_for('chat_with', user_id=user_profile.id) }}" class="btn-accept">💬 Message</a>
+            <a href="{{ url_for('teacher_sessions', user_id=user_profile.id) }}" class="btn-accept">📅 View Lessons</a>
+            <a href="{{ url_for('review', teacher_id=user_profile.id)}}" class="btn-accept">⭐ Check Reviews</a> "
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <h2>📚 Skills I Teach</h2>
+    </div>
+    <div class="card-body">
+        {% for skill in user_profile.skills %}
+        <div class="skill-card">
+            <span class="skill-name">{{ skill.name }}</span>
+            <a href="{{ url_for('teacher_sessions', user_id=user_profile.id, skill_id=skill.id) }}" class="btn-accept">View Lessons →</a>
+        </div>
+        {% else %}
+        <div class="empty-state">No skills added yet</div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Portfolio</h2>
+        {% if current_user.is_authenticated and current_user.id == user_profile.id %}
+            <a href="#" id="showUploadBtn">+ Add New</a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if portfolio %}
+            <div class="portfolio-grid">
+                {% for post in portfolio %}
+                <div class="portfolio-item">
+                    {% if post.image %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="portfolio-image">
+                    {% endif %}
+                    {% if post.text %}
+                    <div class="portfolio-text">{{ post.text[:80] }}{% if post.text|length > 80 %}...{% endif %}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">No portfolio items yet</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if current_user.is_authenticated and current_user.id == user_profile.id %}
+<div id="uploadForm" style="display: none; margin-top: 24px;">
+    <div class="card">
+        <div class="card-header">
+            <h2>📤 Add to Portfolio</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    <label>Description</label>
+                    {{ form.text(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    <label>Image</label>
+                    {{ form.post_image(class="form-control") }}
+                </div>
+                <button type="submit" class="btn-submit">Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    document.getElementById('showUploadBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        var form = document.getElementById('uploadForm');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    });
+</script>
+{% endblock %}
